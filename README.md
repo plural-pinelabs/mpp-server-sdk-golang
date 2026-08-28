@@ -9,11 +9,11 @@ The module uses only the Go standard library and supports Go 1.22 or newer.
 ## Install
 
 ```bash
-go get github.com/pine-labs-online/p3p-server-sdk-go
+go get github.com/plural-pinelabs/mpp-server-sdk-golang@v0.1.0
 ```
 
 ```go
-import p3pserver "github.com/pine-labs-online/p3p-server-sdk-go"
+import p3pserver "github.com/plural-pinelabs/mpp-server-sdk-golang"
 ```
 
 ## Configure

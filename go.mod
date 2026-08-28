@@ -1,3 +1,3 @@
-module github.com/pine-labs-online/p3p-server-sdk-go
+module github.com/plural-pinelabs/mpp-server-sdk-golang
 
 go 1.22
