@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Server struct {
@@ -61,4 +62,46 @@ func (s *Server) GetMandate(ctx context.Context, id string) (Mandate, error) {
 		return Mandate{}, err
 	}
 	return parseMandate(data), nil
+}
+
+// GetOrder retrieves an order by its Pine Labs order ID.
+func (s *Server) GetOrder(ctx context.Context, orderID string) (Order, error) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return Order{}, fmt.Errorf("order_id is required")
+	}
+	data, err := s.apiRequest(ctx, http.MethodGet, "/api/pay/v1/orders/"+pathEscape(orderID), nil, nil)
+	if err != nil {
+		return Order{}, err
+	}
+	return parseOrder(data), nil
+}
+
+// CreateRefund initiates a refund against a processed Pine Labs order.
+func (s *Server) CreateRefund(ctx context.Context, orderID string, options CreateRefundOptions) (Refund, error) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return Refund{}, fmt.Errorf("order_id is required")
+	}
+	options.MerchantOrderReference = strings.TrimSpace(options.MerchantOrderReference)
+	if options.MerchantOrderReference == "" {
+		return Refund{}, fmt.Errorf("CreateRefundOptions: merchantOrderReference is required")
+	}
+	if options.OrderAmount.Value <= 0 {
+		return Refund{}, fmt.Errorf("CreateRefundOptions: orderAmount.value must be a positive integer (paise)")
+	}
+	options.OrderAmount.Currency = strings.TrimSpace(options.OrderAmount.Currency)
+	if options.OrderAmount.Currency == "" {
+		return Refund{}, fmt.Errorf("CreateRefundOptions: orderAmount.currency is required")
+	}
+
+	headers := http.Header{
+		"Request-ID":        {newID()},
+		"Request-Timestamp": {time.Now().UTC().Format(time.RFC3339Nano)},
+	}
+	data, err := s.apiRequest(ctx, http.MethodPost, "/api/pay/v1/refunds/"+pathEscape(orderID), options, headers)
+	if err != nil {
+		return Refund{}, err
+	}
+	return parseRefund(data), nil
 }

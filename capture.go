@@ -148,7 +148,7 @@ func parseCaptureResponse(resp *http.Response, gateway PaymentGateway, idempoten
 		data = envelope
 	}
 	result := CaptureResult{PaymentMethodReferenceID: firstString(data, "payment_method_reference_id"), PaymentID: firstString(data, "payment_id"), MerchantPaymentDebitReference: firstString(data, "merchant_payment_debit_reference"), MerchantOrderReference: firstString(data, "merchant_order_reference"), CaptureID: firstString(data, "capture_id"), OrderID: firstString(data, "order_id"), Status: firstString(data, "status"), SettledAt: firstString(data, "settled_at"), PaymentGateway: gateway, PaymentMethod: PaymentMethod(firstString(data, "payment_method")), IdempotencyKey: idempotency, Raw: data}
-	if amount := asMap(data["amount"]); len(amount) > 0 {
+	if amount := asMap(firstNonNil(data["amount"], data["payment_amount"], data["paymentAmount"])); len(amount) > 0 {
 		result.Amount = &Amount{Value: asInt64(amount["value"]), Currency: firstNonEmpty(firstString(amount, "currency"), "INR")}
 	}
 	return result, nil

@@ -167,7 +167,7 @@ func TestCreditEMICaptureSendsPreAuthorizationReference(t *testing.T) {
 			if body["payment_method"] != "CREDIT_EMI" || body["payment_method_reference_id"] != "auth_credit_emi" {
 				t.Errorf("wrong CREDIT_EMI debit body: %#v", body)
 			}
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{"status": "PROCESSED", "payment_method": "CREDIT_EMI", "payment_method_reference_id": "auth_credit_emi", "amount": map[string]interface{}{"value": 14897000, "currency": "INR"}}})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{"status": "PROCESSED", "payment_method": "CREDIT_EMI", "payment_method_reference_id": "auth_credit_emi", "payment_amount": map[string]interface{}{"value": 14897000, "currency": "INR"}}})
 		default:
 			http.NotFound(w, r)
 		}
@@ -181,7 +181,7 @@ func TestCreditEMICaptureSendsPreAuthorizationReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.PaymentMethodReferenceID != "auth_credit_emi" || result.PaymentMethod != PaymentMethodCreditEMI {
+	if result.PaymentMethodReferenceID != "auth_credit_emi" || result.PaymentMethod != PaymentMethodCreditEMI || result.Amount == nil || result.Amount.Value != 14897000 {
 		t.Fatalf("wrong capture result: %+v", result)
 	}
 }
@@ -334,6 +334,7 @@ func TestGrantexEnforcementAndHostedAPIs(t *testing.T) {
 		t.Fatal("wildcard grant scope must cover its child")
 	}
 	var hostedCalls atomic.Int32
+	var authorizePayload map[string]interface{}
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer gx-key" {
 			t.Errorf("missing hosted authentication: %v", r.Header)
@@ -341,6 +342,7 @@ func TestGrantexEnforcementAndHostedAPIs(t *testing.T) {
 		hostedCalls.Add(1)
 		switch r.URL.Path {
 		case "/v1/authorize":
+			_ = json.NewDecoder(r.Body).Decode(&authorizePayload)
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{"requestId": "req_1", "consentUrl": "https://consent.example", "agentId": "agent_1", "principalId": "user_1", "scopes": []string{"mpp:payment:create"}})
 		case "/v1/token":
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{"grantToken": "grant.jwt", "grantId": "grant_1", "refreshToken": "refresh", "scopes": []string{"mpp:payment:create"}})
@@ -362,9 +364,12 @@ func TestGrantexEnforcementAndHostedAPIs(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	auth, err := hosted.CreateAuthorization(ctx, GrantexAuthorizationOptions{UserID: "user_1", AgentID: "agent_1", Scopes: []string{"mpp:payment:create"}})
+	auth, err := hosted.CreateAuthorization(ctx, GrantexAuthorizationOptions{UserID: "user_1", AgentID: "agent_1", Scopes: []string{"mpp:payment:create"}, RedirectURI: "https://merchant.example/callback", State: "0123456789abcdef0123456789abcdef"})
 	if err != nil || auth.AuthRequestID != "req_1" {
 		t.Fatalf("authorization=%+v err=%v", auth, err)
+	}
+	if authorizePayload["state"] != "0123456789abcdef0123456789abcdef" || authorizePayload["redirectUri"] != "https://merchant.example/callback" {
+		t.Fatalf("authorization payload=%#v", authorizePayload)
 	}
 	token, err := hosted.ExchangeCode(ctx, GrantexExchangeCodeOptions{Code: "code", AgentID: "agent_1"})
 	if err != nil || token.GrantID != "grant_1" {

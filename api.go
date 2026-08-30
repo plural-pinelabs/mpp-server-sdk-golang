@@ -215,6 +215,27 @@ func parsePreAuthorization(data map[string]interface{}) PreAuthorization {
 	challenge := firstString(data, "challenge_url", "challengeUrl")
 	return PreAuthorization{PaymentMethod: PaymentMethod(firstString(data, "payment_method", "type")), PaymentMethodReferenceID: firstString(data, "payment_method_reference_id", "authorization_id", "mandate_id", "order_id", "orderId"), Customer: PreAuthorizationCustomer{CustomerID: firstString(customer, "customer_id"), MerchantCustomerReference: firstString(customer, "merchant_customer_reference"), MobileNumber: firstNonEmpty(firstString(customer, "mobile_number"), firstString(data, "mobile_number"))}, Status: firstString(data, "status", "payment_status", "order_status"), Amount: Amount{Value: asInt64(amount["value"]), Currency: firstNonEmpty(firstString(amount, "currency"), "INR")}, ChallengeURL: firstNonEmpty(challenge, redirect), RedirectURL: firstNonEmpty(redirect, challenge), ValidityInDays: asInt(data["validity_in_days"]), ExpiryAt: firstString(data, "expiry_at", "expires_at"), Raw: data}
 }
+
+func parseOrder(data map[string]interface{}) Order {
+	var result Order
+	raw, err := json.Marshal(data)
+	if err == nil {
+		_ = json.Unmarshal(raw, &result)
+	}
+	result.Raw = data
+	return result
+}
+
+func parseRefund(data map[string]interface{}) Refund {
+	var result Refund
+	raw, err := json.Marshal(data)
+	if err == nil {
+		_ = json.Unmarshal(raw, &result)
+	}
+	result.Raw = data
+	return result
+}
+
 func parseMandateBalance(data map[string]interface{}) MandateBalanceResult {
 	customer := asMap(data["customer"])
 	result := MandateBalanceResult{PaymentMethod: PaymentMethod(firstString(data, "payment_method")), PaymentMethodReferenceID: firstString(data, "payment_method_reference_id"), MerchantID: firstString(data, "merchant_id"), Customer: MandateBalanceCustomer{MobileNumber: firstString(customer, "mobile_number"), MerchantCustomerReference: firstString(customer, "merchant_customer_reference"), BankAccountNumber: firstString(customer, "bank_account_number")}, Status: firstString(data, "status"), Description: firstString(data, "description"), ValidityInDays: asInt(data["validity_in_days"]), ExpiryAt: firstString(data, "expiry_at"), ChallengeURL: firstString(data, "challenge_url"), ExternalReferenceID: firstString(data, "external_reference_id"), CreatedAt: firstString(data, "created_at"), Raw: data}

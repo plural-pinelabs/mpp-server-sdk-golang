@@ -253,6 +253,104 @@ type PreAuthorization struct {
 	ExpiryAt       string
 	Raw            map[string]interface{}
 }
+
+// OrderAddress is a billing or shipping address returned by GetOrder.
+type OrderAddress struct {
+	Address1 string `json:"address1,omitempty"`
+	Address2 string `json:"address2,omitempty"`
+	Address3 string `json:"address3,omitempty"`
+	Pincode  string `json:"pincode,omitempty"`
+	City     string `json:"city,omitempty"`
+	State    string `json:"state,omitempty"`
+	Country  string `json:"country,omitempty"`
+}
+
+// OrderCustomer is the customer snapshot associated with an order.
+type OrderCustomer struct {
+	EmailID         string       `json:"email_id,omitempty"`
+	FirstName       string       `json:"first_name,omitempty"`
+	LastName        string       `json:"last_name,omitempty"`
+	CustomerID      string       `json:"customer_id,omitempty"`
+	MobileNumber    string       `json:"mobile_number,omitempty"`
+	BillingAddress  OrderAddress `json:"billing_address,omitempty"`
+	ShippingAddress OrderAddress `json:"shipping_address,omitempty"`
+}
+
+// OrderPurchaseDetails contains customer and merchant metadata for an order.
+type OrderPurchaseDetails struct {
+	Customer         OrderCustomer          `json:"customer,omitempty"`
+	MerchantMetadata map[string]interface{} `json:"merchant_metadata,omitempty"`
+}
+
+// OrderCardData describes the card used by a payment on an order.
+type OrderCardData struct {
+	CardType     string `json:"card_type,omitempty"`
+	NetworkName  string `json:"network_name,omitempty"`
+	IssuerName   string `json:"issuer_name,omitempty"`
+	CardCategory string `json:"card_category,omitempty"`
+	CountryCode  string `json:"country_code,omitempty"`
+	TokenTxnType string `json:"token_txn_type,omitempty"`
+}
+
+// OrderPaymentOption contains payment-method-specific details.
+type OrderPaymentOption struct {
+	CardData *OrderCardData `json:"card_data,omitempty"`
+}
+
+// OrderAcquirerData contains references returned by the payment acquirer.
+type OrderAcquirerData struct {
+	ApprovalCode      string `json:"approval_code,omitempty"`
+	AcquirerReference string `json:"acquirer_reference,omitempty"`
+	RRN               string `json:"rrn,omitempty"`
+	IsAggregator      bool   `json:"is_aggregator,omitempty"`
+}
+
+// OrderPayment is a payment attempt associated with an order.
+type OrderPayment struct {
+	ID            string             `json:"id,omitempty"`
+	Status        string             `json:"status,omitempty"`
+	PaymentAmount Amount             `json:"payment_amount,omitempty"`
+	PaymentMethod PaymentMethod      `json:"payment_method,omitempty"`
+	PaymentOption OrderPaymentOption `json:"payment_option,omitempty"`
+	AcquirerData  OrderAcquirerData  `json:"acquirer_data,omitempty"`
+	CreatedAt     string             `json:"created_at,omitempty"`
+	UpdatedAt     string             `json:"updated_at,omitempty"`
+}
+
+// Order is the typed response returned by GetOrder. Raw retains the complete
+// upstream object so newly added Pine Labs fields remain available.
+type Order struct {
+	OrderID                string                 `json:"order_id,omitempty"`
+	MerchantOrderReference string                 `json:"merchant_order_reference,omitempty"`
+	Type                   string                 `json:"type,omitempty"`
+	Status                 string                 `json:"status,omitempty"`
+	MerchantID             string                 `json:"merchant_id,omitempty"`
+	OrderAmount            Amount                 `json:"order_amount,omitempty"`
+	PreAuth                bool                   `json:"pre_auth"`
+	PurchaseDetails        OrderPurchaseDetails   `json:"purchase_details,omitempty"`
+	Payments               []OrderPayment         `json:"payments,omitempty"`
+	CreatedAt              string                 `json:"created_at,omitempty"`
+	UpdatedAt              string                 `json:"updated_at,omitempty"`
+	Raw                    map[string]interface{} `json:"-"`
+}
+
+// CreateRefundOptions contains the merchant-supplied values required to
+// initiate a refund against a processed order. Amounts are in the smallest
+// currency unit (paise for INR).
+type CreateRefundOptions struct {
+	MerchantOrderReference string                 `json:"merchant_order_reference"`
+	OrderAmount            Amount                 `json:"order_amount"`
+	MerchantMetadata       map[string]interface{} `json:"merchant_metadata,omitempty"`
+}
+
+// Refund is the order created for a successful refund request. Order fields
+// are promoted, so callers can access refund.OrderID, refund.Status, and
+// refund.Payments directly.
+type Refund struct {
+	Order
+	ParentOrderID string `json:"parent_order_id,omitempty"`
+}
+
 type MandateBalanceLookupOptions struct {
 	AuthorizationID string
 	PhoneNumber     string
@@ -305,6 +403,7 @@ type GrantexAuthorizationOptions struct {
 	AgentID             string
 	Scopes              []string
 	RedirectURI         string
+	State               string
 	ExpiresIn           interface{}
 	CodeChallenge       string
 	CodeChallengeMethod string

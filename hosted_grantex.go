@@ -76,6 +76,7 @@ func (c *HostedGrantexClient) CreateAuthorization(ctx context.Context, options G
 	payload := map[string]interface{}{"agentId": options.AgentID, "principalId": options.UserID, "scopes": options.Scopes}
 	setOptional(payload, "expiresIn", options.ExpiresIn)
 	setOptionalString(payload, "redirectUri", options.RedirectURI)
+	setOptionalString(payload, "state", options.State)
 	setOptionalString(payload, "codeChallenge", options.CodeChallenge)
 	setOptionalString(payload, "codeChallengeMethod", options.CodeChallengeMethod)
 	data, err := c.request(ctx, http.MethodPost, "/v1/authorize", payload)

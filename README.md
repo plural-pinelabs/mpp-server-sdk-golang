@@ -9,7 +9,7 @@ The module uses only the Go standard library and supports Go 1.22 or newer.
 ## Install
 
 ```bash
-go get github.com/plural-pinelabs/mpp-server-sdk-golang@v0.1.0
+go get github.com/plural-pinelabs/mpp-server-sdk-golang@v1.0.0
 ```
 
 ```go
@@ -91,6 +91,55 @@ successful response is never rejected only because `redirect_url` is absent.
 
 The module also exposes `CreateMandate`, `GetMandate`, `GetMandateBalance`,
 and `RevokeMandate`.
+
+## Get an order by order ID
+
+```go
+order, err := server.GetOrder(ctx, "v1-5757575757-aa-hU1rUd")
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println(order.Status)
+fmt.Println(order.OrderAmount.Value)
+fmt.Println(order.Payments)
+```
+
+`GetOrder` calls `GET /api/pay/v1/orders/{order_id}` against the configured
+UAT or production base URL. It uses the SDK-managed bearer token, sends the
+configured `Merchant-ID`, returns typed order, customer, address, payment,
+card, and acquirer data, and retains the complete upstream payload in
+`Order.Raw`.
+
+## Create a refund
+
+Refunds can be created only against an order that Pine Labs reports as
+processed. Values are supplied in paise for INR.
+
+```go
+refund, err := server.CreateRefund(ctx, "v1-241010055924-aa-AHbN0s", p3pserver.CreateRefundOptions{
+	MerchantOrderReference: "refund-reference-123",
+	OrderAmount: p3pserver.Amount{
+		Value:    1100,
+		Currency: "INR",
+	},
+	MerchantMetadata: map[string]interface{}{
+		"key1":  "DD",
+		"key_2": "XOF",
+	},
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println(refund.OrderID)
+fmt.Println(refund.ParentOrderID)
+fmt.Println(refund.Status)
+```
+
+`CreateRefund` calls `POST /api/pay/v1/refunds/{order_id}` against the
+configured UAT or production base URL. The SDK supplies authentication,
+`Merchant-ID`, `Request-ID`, and `Request-Timestamp` headers.
 
 ## Capture and pending debit safety
 
